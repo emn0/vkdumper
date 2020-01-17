@@ -27,7 +27,7 @@ def con(text):
 
 
 def captcha_handler(captcha):
-    r = input('Введите капчу ' + captcha.get_url() + ': ').strip()
+    r = input('Введите капчу: ' + captcha.get_url() + ': ').strip()
     return captcha.try_again(r)
 
 
@@ -70,7 +70,7 @@ def main():
         try:
             vk.auth(token_only=True)
         except AuthError:
-            con(Colors.ERROR + 'Неверный логин или пароль')
+            con(Colors.ERROR + 'Неверный логин или пароль.')
             return
     else:
         con(Colors.WARNING + 'Введите данные для входа в виде "логин:пароль" или "токен"')
@@ -80,14 +80,14 @@ def main():
         user = vk.method('users.get')[0]
     except VkApiError as ex:
         if ex.__dict__['error']['error_code'] == 5:
-            error_text = 'неверный токен'
+            error_text = 'Неверный токен.'
         else:
             error_text = str(ex)
 
         con(Colors.ERROR + 'Ошибка входа: ' + error_text)
         return
 
-    con(Colors.OK + 'Вход выполнен')
+    con(Colors.OK + 'Вход выполнен.')
 
     infos = []
 
@@ -127,7 +127,8 @@ def main():
 
     for i in infos:
         if i[1]:
-            index_file += '<div class="item"><div class="item__main"><a href="messages/{0}.html">{1}</a></div><div class="item__tertiary">@{2}</div></div>'.format(i[0], i[2], i[1])
+            index_file += '<div class="item"><div class="item__main"><a href="messages/{0}.html">{1}</a></div>' \
+                          '<div class="item__tertiary">@{2}</div></div>'.format(i[0], i[2], i[1])
         else:
             index_file += '<div class="item"><a href="messages/{0}.html">{1}</a></div>'.format(i[0], i[2])
 
@@ -142,7 +143,7 @@ def main():
         os.makedirs(messages_dir)
 
     total = ' \\ ' + str(len(infos))
-
+    images = []
     for num in range(len(infos)):
         info = infos[num]
         msgs = []
@@ -152,7 +153,8 @@ def main():
 
         for offset in range(min(((msg_count - 1) // 200 + 1), config['limit'] // 200)):
             try:
-                chunk = vk.method('messages.getHistory', {'peer_id': info[0], 'count': 200, 'extended': 1, 'offset': offset * 200})
+                chunk = vk.method('messages.getHistory',
+                                  {'peer_id': info[0], 'count': 200, 'extended': 1, 'offset': offset * 200})
 
                 for msg in chunk['items']:
                     if msg['from_id'] < 0:
@@ -226,7 +228,8 @@ def main():
                                 desc = 'Комментарий на стене (удалён)'
                             else:
                                 desc = 'Комментарий на стене'
-                                link = 'https://vk.com/wall' + str(i['wall_reply']['owner_id']) + '_' + str(i['wall_reply']['post_id']) + '?reply=' + str(i['wall_reply']['id'])
+                                link = 'https://vk.com/wall' + str(i['wall_reply']['owner_id']) + '_' + str(
+                                    i['wall_reply']['post_id']) + '?reply=' + str(i['wall_reply']['id'])
 
                         elif i['type'] == 'sticker':
                             desc = 'Стикер ID ' + str(i['sticker']['sticker_id'])
@@ -248,14 +251,15 @@ def main():
                         attach = '<div class="attachment__description">' + desc + '</div>'
                         if link:
                             attach += '<a class="attachment__link" href="' + link + '" target="_blank">' + link + '</a>'
-
+                            if desc == 'Фотография':
+                                attach += '<img src="' + link + '"></img>'
+                                images.append(attach)
                         a.append(attach)
 
                     msgs.append((sender, msg['date'], sender_name, text, a))
 
             except KeyError:
                 con(Colors.WARNING + 'Ошибка при сохранении диалога ' + str(info[0]))
-
         with open('files/messages_pre.html', encoding='utf-8') as f:
             file = f.read().replace('\n', '').format(user['id'], name, info[2])
 
@@ -264,13 +268,26 @@ def main():
             tm = time.strftime('%d.%m.%Y %H:%M:%S', time.gmtime(msg[1] + TZ))
             attach = '<div class="kludges">' + '\n'.join(msg[4]) + '</div>' if msg[4] else ''
 
-            file += '<div class="item"><div class="item__main"><div class="message"><div class="message__header">{0}{2}</div><div>{1}</div></div></div></div>'.format(link + tm, msg[3], attach)
+            file += '<div class="item"><div class="item__main"><div class="message">' \
+                    '<div class="message__header">{0}{2}</div><div>{1}</div>' \
+                    '</div></div></div>'.format(link + tm, msg[3], attach)
 
         with open('files/index_post.html', encoding='utf-8') as f:
             file += f.read().replace('\n', '')
 
         with open(messages_dir + str(info[0]) + '.html', 'w', encoding='utf-8') as f:
             f.write(file)
+
+        with open('files/attachments_pre.html', encoding='utf-8') as f:
+            file2 = f.read()
+        for attachment in images:
+            attachment = '<div class="item"><div class="item__main"><div class="item__main"><div class="message">' \
+                         '<div class="message__header">{}</div></div></div></div></div>'.format(attachment)
+            file2 += attachment
+        with open(messages_dir + 'attachments.html', 'w', encoding='utf-8') as f:
+            f.write(file2)
+        with open('files/attachments_post.html', encoding='utf-8') as f:
+            file2 += f.read()
 
     con(Colors.OK + 'Готово!')
 
