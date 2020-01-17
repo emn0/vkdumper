@@ -31,6 +31,12 @@ def captcha_handler(captcha):
     return captcha.try_again(r)
 
 
+def auth_handler():
+    key = input('Введите код подтверждения: ')
+    remember_device = True
+    return key, remember_device
+
+
 def main():
     init()
 
@@ -59,11 +65,7 @@ def main():
 
     elif ':' in s:
         sp = s.split(':')
-        vk = VkApi(sp[0], sp[1], app_id=2685278, captcha_handler=captcha_handler)
-
-        vk.http.headers.update({
-            'User-agent': USER_AGENT
-        })
+        vk = VkApi(sp[0], sp[1], app_id=2685278, captcha_handler=captcha_handler, auth_handler=auth_handler)
 
         try:
             vk.auth(token_only=True)
