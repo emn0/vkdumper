@@ -50,7 +50,7 @@ def main():
 
     s = input('Введите "логин:пароль" или токен: ')
 
-    if len(s) == 85:
+    if len(s) >= 85:
         vk = VkApi(token=s, captcha_handler=captcha_handler)
 
         vk.http.headers.update({
